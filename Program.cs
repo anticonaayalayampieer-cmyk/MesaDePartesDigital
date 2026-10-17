@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace MesaDePartesDigital
 {
+    // ==========================================
+    // CLASE MODELO: Solicitud (Entidad principal)
+    // ==========================================
     public class Solicitud
     {
         public string Id { get; set; }
@@ -13,11 +16,13 @@ namespace MesaDePartesDigital
         public string FechaRegistro { get; set; }
         public string Estado { get; set; }
 
+        // Serializa el objeto a una línea de texto plano separada por pipes (|)
         public override string ToString()
         {
             return $"{Id}|{Dni}|{NombreCompleto}|{Asunto}|{FechaRegistro}|{Estado}";
         }
 
+        // Deserializa una línea de texto plano y la convierte en un objeto Solicitud
         public static Solicitud DesdeLinea(string linea)
         {
             var partes = linea.Split('|');
@@ -45,14 +50,16 @@ namespace MesaDePartesDigital
             {
                 Console.Clear();
                 Console.WriteLine("========================================");
-                Console.WriteLine("   MESA DE PARTES DIGITAL - SISTEMA     ");
+                Console.WriteLine("    MESA DE PARTES DIGITAL - SISTEMA    ");
                 Console.WriteLine("========================================");
                 Console.WriteLine("1. Registrar nueva solicitud");
                 Console.WriteLine("2. Listar todas las solicitudes");
                 Console.WriteLine("3. Buscar solicitud por DNI");
-                Console.WriteLine("4. Salir");
+                Console.WriteLine("4. Cambiar estado de una solicitud");
+                Console.WriteLine("5. Eliminar solicitud por ID");
+                Console.WriteLine("6. Salir");
                 Console.WriteLine("----------------------------------------");
-                Console.Write("Seleccione una opción (1-4): ");
+                Console.Write("Seleccione una opción (1-6): ");
 
                 string opcion = Console.ReadLine();
                 switch (opcion)
@@ -67,6 +74,12 @@ namespace MesaDePartesDigital
                         BuscarSolicitud();
                         break;
                     case "4":
+                        CambiarEstadoSolicitud();
+                        break;
+                    case "5":
+                        EliminarSolicitud();
+                        break;
+                    case "6":
                         salir = true;
                         Console.WriteLine("\n¡Gracias por utilizar la Mesa de Partes Digital!");
                         break;
@@ -78,6 +91,7 @@ namespace MesaDePartesDigital
             }
         }
 
+        // 1. Registro con validaciones estrictas
         private static void RegistrarSolicitud()
         {
             Console.Clear();
@@ -151,6 +165,7 @@ namespace MesaDePartesDigital
             Console.ReadKey();
         }
 
+        // 2. Listado en formato tabular
         private static void ListarSolicitudes()
         {
             Console.Clear();
@@ -188,6 +203,7 @@ namespace MesaDePartesDigital
             Console.ReadKey();
         }
 
+        // 3. Búsqueda por DNI
         private static void BuscarSolicitud()
         {
             Console.Clear();
@@ -210,12 +226,12 @@ namespace MesaDePartesDigital
                     if (sol != null && sol.Dni == dniBuscar)
                     {
                         Console.WriteLine("\n----------------------------------------");
-                        Console.WriteLine($"Código ID : {sol.Id}");
-                        Console.WriteLine($"DNI       : {sol.Dni}");
+                        Console.WriteLine($"Código ID  : {sol.Id}");
+                        Console.WriteLine($"DNI        : {sol.Dni}");
                         Console.WriteLine($"Solicitante: {sol.NombreCompleto}");
-                        Console.WriteLine($"Asunto    : {sol.Asunto}");
-                        Console.WriteLine($"Fecha     : {sol.FechaRegistro}");
-                        Console.WriteLine($"Estado    : {sol.Estado}");
+                        Console.WriteLine($"Asunto     : {sol.Asunto}");
+                        Console.WriteLine($"Fecha      : {sol.FechaRegistro}");
+                        Console.WriteLine($"Estado     : {sol.Estado}");
                         Console.WriteLine("----------------------------------------");
                         encontrado = true;
                     }
@@ -225,6 +241,132 @@ namespace MesaDePartesDigital
                 {
                     Console.WriteLine($"\n[INFO] No se encontraron solicitudes registradas con el DNI: {dniBuscar}");
                 }
+            }
+
+            Console.WriteLine("\nPresione cualquier tecla para volver al menú...");
+            Console.ReadKey();
+        }
+
+        // 4. Actualización de estado (Lectura, modificación en memoria y reescritura)
+        private static void CambiarEstadoSolicitud()
+        {
+            Console.Clear();
+            Console.WriteLine("--- CAMBIAR ESTADO DE UNA SOLICITUD ---");
+
+            if (!File.Exists(rutaArchivo))
+            {
+                Console.WriteLine("\nNo hay registros guardados.");
+                Console.WriteLine("\nPresione cualquier tecla para volver al menú...");
+                Console.ReadKey();
+                return;
+            }
+
+            Console.Write("Ingrese el ID de la solicitud (Ej: SOL-2026...): ");
+            string idBuscar = Console.ReadLine()?.Trim();
+
+            string[] lineas = File.ReadAllLines(rutaArchivo);
+            bool encontrado = false;
+            List<string> nuevasLineas = new List<string>();
+
+            foreach (var linea in lineas)
+            {
+                var sol = Solicitud.DesdeLinea(linea);
+                if (sol != null && sol.Id.Equals(idBuscar, StringComparison.OrdinalIgnoreCase))
+                {
+                    encontrado = true;
+                    Console.WriteLine("\n----------------------------------------");
+                    Console.WriteLine($"ID         : {sol.Id}");
+                    Console.WriteLine($"Solicitante: {sol.NombreCompleto}");
+                    Console.WriteLine($"Estado Act : {sol.Estado}");
+                    Console.WriteLine("----------------------------------------");
+
+                    Console.WriteLine("\nSeleccione el nuevo estado:");
+                    Console.WriteLine("1. Pendiente");
+                    Console.WriteLine("2. En Proceso");
+                    Console.WriteLine("3. Aprobado");
+                    Console.WriteLine("4. Rechazado");
+                    Console.Write("Opción (1-4): ");
+                    string opcEstado = Console.ReadLine()?.Trim();
+
+                    switch (opcEstado)
+                    {
+                        case "1": sol.Estado = "Pendiente"; break;
+                        case "2": sol.Estado = "En Proceso"; break;
+                        case "3": sol.Estado = "Aprobado"; break;
+                        case "4": sol.Estado = "Rechazado"; break;
+                        default:
+                            Console.WriteLine("[INFO] Opción no válida. Se mantendrá el estado actual.");
+                            break;
+                    }
+
+                    nuevasLineas.Add(sol.ToString());
+                }
+                else
+                {
+                    nuevasLineas.Add(linea);
+                }
+            }
+
+            if (encontrado)
+            {
+                File.WriteAllLines(rutaArchivo, nuevasLineas);
+                Console.WriteLine("\n[ÉXITO] El estado de la solicitud ha sido actualizado correctamente.");
+            }
+            else
+            {
+                Console.WriteLine($"\n[ERROR] No se encontró ninguna solicitud con el ID: {idBuscar}");
+            }
+
+            Console.WriteLine("\nPresione cualquier tecla para volver al menú...");
+            Console.ReadKey();
+        }
+
+        // 5. Eliminación de registro por ID
+        private static void EliminarSolicitud()
+        {
+            Console.Clear();
+            Console.WriteLine("--- ELIMINAR SOLICITUD POR ID ---");
+
+            if (!File.Exists(rutaArchivo))
+            {
+                Console.WriteLine("\nNo hay registros guardados.");
+                Console.WriteLine("\nPresione cualquier tecla para volver al menú...");
+                Console.ReadKey();
+                return;
+            }
+
+            Console.Write("Ingrese el ID de la solicitud a eliminar: ");
+            string idBuscar = Console.ReadLine()?.Trim();
+
+            string[] lineas = File.ReadAllLines(rutaArchivo);
+            bool encontrado = false;
+            List<string> nuevasLineas = new List<string>();
+
+            foreach (var linea in lineas)
+            {
+                var sol = Solicitud.DesdeLinea(linea);
+                if (sol != null && sol.Id.Equals(idBuscar, StringComparison.OrdinalIgnoreCase))
+                {
+                    encontrado = true;
+                    Console.WriteLine("\n----------------------------------------");
+                    Console.WriteLine($"Se eliminó la solicitud de: {sol.NombreCompleto}");
+                    Console.WriteLine($"Asunto                    : {sol.Asunto}");
+                    Console.WriteLine("----------------------------------------");
+                }
+                else
+                {
+                    nuevasLineas.Add(linea);
+                }
+            }
+
+            if (encontrado)
+            {
+                File.WriteAllLines(rutaArchivo, nuevasLineas);
+                Console.WriteLine("\n[ÉXITO] Registro eliminado correctamente del archivo.");
+            }
+            else
+            {
+                Console.WriteLine($"\n[ERROR] No se encontró ninguna solicitud con el ID: {idBuscar}");
             }
 
             Console.WriteLine("\nPresione cualquier tecla para volver al menú...");
